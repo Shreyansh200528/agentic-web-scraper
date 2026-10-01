@@ -5,7 +5,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
-    console.error("❌ ERROR: GEMINI_API_KEY is not set in the .env file.");
+    console.error("[FATAL] Environment variable GEMINI_API_KEY is not defined. Execution terminated.");
     process.exit(1);
 }
 
@@ -20,11 +20,11 @@ async function fetchFromGeminiWithRetry(model, prompt) {
             return result;
         } catch (err) {
             if (err.status === 503 && retries > 1) {
-                console.log(`⏳ Google's servers are busy (503). Retrying in 3 seconds...`);
+                console.log(`[WARN] HTTP 503 Service Unavailable encountered. Initiating 3000ms backoff...`);
                 await new Promise(r => setTimeout(r, 3000));
                 retries--;
             } else if (err.status === 429 && retries > 1) {
-                console.log(`⚠️ Rate limit hit (429). Pausing for 40 seconds to respect free tier limits...`);
+                console.log(`[WARN] HTTP 429 Too Many Requests encountered. Enforcing 40000ms rate-limit backoff...`);
                 await new Promise(r => setTimeout(r, 40000));
                 retries--;
             } else {
@@ -37,7 +37,7 @@ async function fetchFromGeminiWithRetry(model, prompt) {
 async function extractDataWithAI(cleanHtml) {
     const textChunk = cleanHtml.substring(0, 50000); 
     
-    console.log(`🧭 Agent 1 (Router): Scanning webpage to determine category...`);
+    console.log(`[INFO] [Router Agent] Analyzing DOM payload for intent classification...`);
     const routerModel = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
     const routerPrompt = `You are a semantic router. Look at the following webpage text and classify it into exactly ONE of these four categories: PRODUCT, ARTICLE, JOB, or GENERAL.
     Respond with ONLY the exact category word in uppercase. No other text.
@@ -53,10 +53,10 @@ async function extractDataWithAI(cleanHtml) {
             category = "GENERAL";
         }
     } catch (err) {
-        console.error("❌ Router failed, defaulting to GENERAL schema");
+        console.error("[ERROR] Router agent exception encountered. Defaulting to GENERAL schema fallback.");
     }
 
-    console.log(`🎯 Router decided this is a [${category}] page. Selecting correct schema...`);
+    console.log(`[INFO] [Router Agent] Classification resolved: ${category}. Schema selected.`);
 
     let selectedSchema;
     if (category === "PRODUCT") selectedSchema = schemas.productSchema;
@@ -65,7 +65,7 @@ async function extractDataWithAI(cleanHtml) {
     else selectedSchema = schemas.generalSchema;
 
 
-    console.log(`🤖 Agent 2 (Extractor): Forcing LLM to extract data using the ${category} schema...`);
+    console.log(`[INFO] [Extractor Agent] Initiating structured data extraction via LLM...`);
     
     const extractorModel = genAI.getGenerativeModel({ 
         model: "gemini-3.5-flash",
@@ -76,7 +76,6 @@ async function extractDataWithAI(cleanHtml) {
         }
     });
 
-    // UPDATED PROMPT: Strict instructions against hallucination
     const extractorPrompt = `You are an expert web scraper. Extract the details from the following raw webpage text. 
     
     CRITICAL RULES:
@@ -95,7 +94,7 @@ async function extractDataWithAI(cleanHtml) {
             ExtractedData: extractedJson 
         };
     } catch (error) {
-        console.error("❌ Extractor Failed:", error);
+        console.error("[ERROR] Extractor agent exception:", error.message);
         return null;
     }
 }

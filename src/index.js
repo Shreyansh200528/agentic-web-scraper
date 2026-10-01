@@ -2,24 +2,21 @@ const { fetchCleanHtml } = require("./browser");
 const { extractDataWithAI } = require("./agent");
 
 async function main() {
-    // This is a dummy e-commerce site designed for testing web scrapers
-    const testUrl = "https://codeforces.com/contest/2001/problem/C"; 
+    const testUrl = "https://webscraper.io/test-sites/e-commerce/allinone/product/50"; 
     
-    console.log("🚀 Starting Agentic Scraper...");
+    console.log("[INFO] Initializing extraction pipeline...");
     
     try {
-        // Step 1: Grab and clean the HTML
-        const htmlText = await fetchCleanHtml(testUrl);
-        console.log(`✅ Fetched and cleaned webpage. Reduced size to: ${htmlText.length} characters.`);
+        const { rawSize, cleanSize, cleanHtml } = await fetchCleanHtml(testUrl);
+        console.log(`[INFO] DOM sanitization complete. Payload size reduced from ${rawSize} to ${cleanSize} bytes.`);
         
-        // Step 2: Use AI to extract the JSON
-        const data = await extractDataWithAI(htmlText);
+        const data = await extractDataWithAI(cleanHtml);
         
-        console.log("\n🎉 Extraction Complete! Here is the structured JSON data:\n");
+        console.log("\n[SUCCESS] Extraction completed successfully. Output:\n");
         console.log(JSON.stringify(data, null, 2));
         
     } catch (error) {
-        console.error("An error occurred during execution:", error);
+        console.error("[ERROR] Execution terminated due to exception:", error.message);
     }
 }
 

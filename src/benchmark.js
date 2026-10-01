@@ -34,7 +34,7 @@ const TEST_URLS = [
 ];
 
 async function runBenchmark() {
-    console.log(`🚀 Starting Agentic Scraper Benchmark on ${TEST_URLS.length} URLs...`);
+    console.log(`[INFO] Initializing benchmark suite for ${TEST_URLS.length} endpoints...`);
     
     const outputDir = path.join(__dirname, '../output');
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir);
@@ -43,12 +43,11 @@ async function runBenchmark() {
     let totalCleanSize = 0;
     let successCount = 0;
     
-    // Track routing accuracy internally for the report
     let routingStats = { PRODUCT: 0, ARTICLE: 0, JOB: 0, GENERAL: 0, UNKNOWN: 0 };
 
     for (let i = 0; i < TEST_URLS.length; i++) {
         const url = TEST_URLS[i];
-        console.log(`\n[${i+1}/${TEST_URLS.length}] Processing: ${url}`);
+        console.log(`\n[INFO] Request [${i+1}/${TEST_URLS.length}] Target: ${url}`);
         
         try {
             const { rawSize, cleanSize, cleanHtml } = await fetchCleanHtml(url);
@@ -64,36 +63,36 @@ async function runBenchmark() {
                 
                 const filename = `${safeCategory}_${Date.now()}.json`;
                 fs.writeFileSync(path.join(outputDir, filename), JSON.stringify(data, null, 2));
+                console.log(`[SUCCESS] Data serialized to output/${filename}`);
+            } else {
+                console.error("[ERROR] Data extraction yielded null or malformed response.");
             }
             
-            // Wait 8 seconds between URLs. 
-            // Since we make 2 API calls per URL, this ensures we stay well under 
-            // the free-tier limit of 15 Requests Per Minute.
             if (i < TEST_URLS.length - 1) {
-                console.log("⏳ Waiting 8 seconds to respect free-tier API rate limits...");
+                console.log("[INFO] Applying 8000ms delay to comply with API rate limits...");
                 await new Promise(r => setTimeout(r, 8000));
             }
             
         } catch (error) {
-            console.error(`❌ Error processing ${url}:`, error.message);
+            console.error(`[ERROR] Exception processing ${url}:`, error.message);
         }
     }
 
     console.log("\n==========================================");
-    console.log("📊 FINAL BENCHMARK METRICS (For Resume)");
+    console.log("BENCHMARK EXECUTION SUMMARY");
     console.log("==========================================");
-    console.log(`✅ Extraction Success Rate: ${((successCount / TEST_URLS.length) * 100).toFixed(1)}% (${successCount}/${TEST_URLS.length})`);
-    console.log(`🎯 Routing Breakdown:`);
-    console.log(`   - Products: ${routingStats.PRODUCT}`);
-    console.log(`   - Articles: ${routingStats.ARTICLE}`);
-    console.log(`   - Jobs:     ${routingStats.JOB}`);
-    console.log(`   - General:  ${routingStats.GENERAL}`);
-    console.log(`📉 Total Raw HTML Downloaded: ${totalRawSize.toLocaleString()} characters`);
-    console.log(`📉 Total Cleaned Text Sent to AI: ${totalCleanSize.toLocaleString()} characters`);
+    console.log(`Extraction Success Rate : ${((successCount / TEST_URLS.length) * 100).toFixed(1)}% (${successCount}/${TEST_URLS.length})`);
+    console.log(`Routing Breakdown       :`);
+    console.log(`  - Products            : ${routingStats.PRODUCT}`);
+    console.log(`  - Articles            : ${routingStats.ARTICLE}`);
+    console.log(`  - Jobs                : ${routingStats.JOB}`);
+    console.log(`  - General             : ${routingStats.GENERAL}`);
+    console.log(`Total Raw HTML Size     : ${totalRawSize.toLocaleString()} bytes`);
+    console.log(`Total Sanitized Size    : ${totalCleanSize.toLocaleString()} bytes`);
     
     if (totalRawSize > 0) {
         const reduction = ((totalRawSize - totalCleanSize) / totalRawSize) * 100;
-        console.log(`🚀 Payload Reduction: ${reduction.toFixed(2)}% savings in LLM tokens and cost!`);
+        console.log(`Payload Reduction       : ${reduction.toFixed(2)}%`);
     }
     console.log("==========================================\n");
 }
